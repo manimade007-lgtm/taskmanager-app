@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskFlow</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav>
+    <div class="logo">✅ TaskFlow</div>
+    <div class="nav-links">
+      <a href="#" id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</a>
+      <a href="#" id="nav-tasks" onclick="showPage('tasks')">My Tasks</a>
+      <a href="#" id="nav-admin" style="display:none" onclick="showPage('admin')">Admin</a>
+      <span id="nav-user" class="nav-user"></span>
+      <a href="#" id="nav-logout" style="display:none" onclick="logout()">Logout</a>
+      <a href="#" id="nav-login" onclick="showPage('auth')">Login</a>
+    </div>
+  </nav>
+
+  <!-- Dashboard Page -->
+  <section id="page-dashboard" class="page active">
+    <div class="dashboard-header">
+      <h2 id="welcome-msg">Welcome to TaskFlow!</h2>
+      <button class="btn-primary" onclick="openTaskModal()">+ New Task</button>
+    </div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="dashboard-grid">
+      <div class="task-column" id="col-todo">
+        <div class="col-header todo-header">📋 To Do <span id="count-todo">0</span></div>
+        <div class="col-body" id="list-todo"></div>
+      </div>
+      <div class="task-column" id="col-inprogress">
+        <div class="col-header inprogress-header">🔄 In Progress <span id="count-inprogress">0</span></div>
+        <div class="col-body" id="list-inprogress"></div>
+      </div>
+      <div class="task-column" id="col-completed">
+        <div class="col-header completed-header">✅ Completed <span id="count-completed">0</span></div>
+        <div class="col-body" id="list-completed"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tasks Page -->
+  <section id="page-tasks" class="page">
+    <div class="page-header">
+      <h2>All Tasks</h2>
+      <button class="btn-primary" onclick="openTaskModal()">+ New Task</button>
+    </div>
+    <div class="filters">
+      <input id="search-input" type="text" placeholder="🔍 Search tasks..." oninput="loadTasks()"/>
+      <select id="filter-status" onchange="loadTasks()">
+        <option value="">All Status</option>
+        <option value="todo">To Do</option>
+        <option value="in-progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+      <select id="filter-priority" onchange="loadTasks()">
+        <option value="">All Priority</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select id="filter-category" onchange="loadTasks()">
+        <option value="">All Categories</option>
+        <option value="General">General</option>
+        <option value="Work">Work</option>
+        <option value="Personal">Personal</option>
+        <option value="Shopping">Shopping</option>
+        <option value="Health">Health</option>
+      </select>
+    </div>
+    <div id="tasks-list" class="tasks-list"></div>
+  </section>
+
+  <!-- Admin Page -->
+  <section id="page-admin" class="page">
+    <h2>Admin Panel</h2>
+    <div class="admin-tabs">
+      <button class="tab-btn active" onclick="adminTab('tasks')">All Tasks</button>
+      <button class="tab-btn" onclick="adminTab('users')">Users</button>
+    </div>
+    <div id="admin-tasks-panel">
+      <div id="admin-tasks-list" class="tasks-list"></div>
+    </div>
+    <div id="admin-users-panel" style="display:none">
+      <div id="admin-users-list"></div>
+    </div>
+  </section>
+
+  <!-- Auth Page -->
+  <section id="page-auth" class="page">
+    <div class="auth-box">
+      <div class="auth-toggle">
+        <button class="tab-btn active" onclick="authMode('login')">Login</button>
+        <button class="tab-btn" onclick="authMode('register')">Register</button>
+      </div>
+      <form id="login-form" onsubmit="login(event)">
+        <h3>Welcome Back!</h3>
+        <input id="l-email" type="email" placeholder="Email" required/>
+        <input id="l-password" type="password" placeholder="Password" required/>
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+      <form id="register-form" onsubmit="register(event)" style="display:none">
+        <h3>Create Account</h3>
+        <input id="r-name" placeholder="Full Name" required/>
+        <input id="r-email" type="email" placeholder="Email" required/>
+        <input id="r-password" type="password" placeholder="Password" required/>
+        <select id="r-role">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit" class="btn-primary">Register</button>
+      </form>
+      <p id="auth-msg" class="msg"></p>
+    </div>
+  </section>
+
+  <!-- Task Modal -->
+  <div id="task-modal" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('task-modal').style.display='none'">✕</button>
+      <h3 id="modal-title">New Task</h3>
+      <form id="task-form" onsubmit="saveTask(event)">
+        <input type="hidden" id="task-id"/>
+        <input id="t-title" placeholder="Task Title" required/>
+        <textarea id="t-desc" placeholder="Description (optional)"></textarea>
+        <div class="form-row">
+          <select id="t-status">
+            <option value="todo">To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select id="t-priority">
+            <option value="low">Low Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="high">High Priority</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <select id="t-category">
+            <option value="General">General</option>
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Health">Health</option>
+          </select>
+          <input id="t-due" type="date"/>
+        </div>
+        <button type="submit" class="btn-primary" id="task-submit-btn">Create Task</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
